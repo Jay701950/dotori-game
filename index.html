@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Star Clicker</title>
+
+<style>
+
+body{
+margin:0;
+background:#060612;
+color:white;
+font-family:sans-serif;
+overflow:hidden;
+}
+
+#top{
+position:absolute;
+top:15px;
+left:15px;
+}
+
+#stars{
+font-size:30px;
+font-weight:bold;
+}
+
+#userid{
+font-size:13px;
+opacity:0.6;
+}
+
+#shopBtn{
+margin-top:10px;
+padding:8px 16px;
+background:#1e1e3a;
+border:none;
+color:white;
+cursor:pointer;
+border-radius:6px;
+}
+
+#circle{
+position:absolute;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+width:220px;
+height:220px;
+border-radius:100%;
+background:radial-gradient(circle,#4444ff,#09092a);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:22px;
+cursor:pointer;
+transition:0.1s;
+}
+
+#circle:active{
+transform:translate(-50%,-50%) scale(0.95);
+}
+
+#shop{
+position:absolute;
+left:-320px;
+top:0;
+width:320px;
+height:100%;
+background:#111122;
+transition:0.3s;
+padding:20px;
+}
+
+.upgrade{
+background:#1c1c3d;
+margin-top:15px;
+padding:10px;
+border-radius:6px;
+cursor:pointer;
+}
+
+#closeShop{
+background:red;
+border:none;
+color:white;
+padding:5px 10px;
+cursor:pointer;
+}
+
+#login{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#121226;
+padding:40px;
+border-radius:10px;
+}
+
+.float{
+position:absolute;
+color:yellow;
+pointer-events:none;
+animation:float 1s linear forwards;
+}
+
+@keyframes float{
+0%{opacity:1;transform:translateY(0)}
+100%{opacity:0;transform:translateY(-60px)}
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="login">
+<h2>로그인</h2>
+<input id="nameInput" placeholder="아이디">
+<button onclick="login()">시작</button>
+</div>
+
+<div id="top">
+<div id="stars">⭐ 0</div>
+<div id="userid"></div>
+<button id="shopBtn">상점</button>
+</div>
+
+<div id="circle">⭐</div>
+
+<div id="shop">
+
+<button id="closeShop">닫기</button>
+
+<h2>상점</h2>
+
+<div class="upgrade" id="clickUp"></div>
+
+<div class="upgrade" id="autoUp"></div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyA6whp6QHcyOuBQ2cw2nuWlxV8KWChW_CM",
+authDomain: "dotori-game.firebaseapp.com",
+projectId: "dotori-game",
+storageBucket: "dotori-game.firebasestorage.app",
+messagingSenderId: "600286348366",
+appId: "1:600286348366:web:3ec0e53c54b07d5c4cef1f",
+measurementId: "G-7EX7B1T5C9"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getFirestore(app);
+
+let stars=0
+let multiplier=1
+let auto=0
+
+let clickCost=10
+let autoCost=50
+
+let username=""
+
+const starText=document.getElementById("stars")
+
+function format(n){
+
+if(n>=1e12)return (n/1e12).toFixed(1)+"T"
+if(n>=1e9)return (n/1e9).toFixed(1)+"B"
+if(n>=1e6)return (n/1e6).toFixed(1)+"M"
+if(n>=1e3)return (n/1e3).toFixed(1)+"K"
+
+return Math.floor(n)
+
+}
+
+function updateUI(){
+
+starText.innerText="⭐ "+format(stars)
+
+}
+
+document.getElementById("circle").onclick=(e)=>{
+
+stars+=multiplier
+
+spawnNumber(e.clientX,e.clientY)
+
+updateUI()
+
+}
+
+function spawnNumber(x,y){
+
+const el=document.createElement("div")
+el.className="float"
+el.innerText="+"+multiplier
+el.style.left=x+"px"
+el.style.top=y+"px"
+
+document.body.appendChild(el)
+
+setTimeout(()=>el.remove(),1000)
+
+}
+
+document.getElementById("shopBtn").onclick=()=>{
+
+document.getElementById("shop").style.left="0"
+
+}
+
+document.getElementById("closeShop").onclick=()=>{
+
+document.getElementById("shop").style.left="-320px"
+
+}
+
+document.getElementById("clickUp").onclick=()=>{
+
+if(stars>=clickCost){
+
+stars-=clickCost
+multiplier*=2
+clickCost=Math.floor(clickCost*1.8)
+
+}
+
+updateShop()
+
+}
+
+document.getElementById("autoUp").onclick=()=>{
+
+if(stars>=autoCost){
+
+stars-=autoCost
+auto+=1
+autoCost=Math.floor(autoCost*2)
+
+}
+
+updateShop()
+
+}
+
+function updateShop(){
+
+document.getElementById("clickUp").innerText=
+"클릭 배율 x"+multiplier+"\n가격 ⭐ "+clickCost
+
+document.getElementById("autoUp").innerText=
+"자동 생성 "+auto+"/초\n가격 ⭐ "+autoCost
+
+updateUI()
+
+}
+
+setInterval(()=>{
+
+stars+=auto
+updateUI()
+
+},1000)
+
+async function login(){
+
+username=document.getElementById("nameInput").value
+
+document.getElementById("userid").innerText="ID: "+username
+
+document.getElementById("login").style.display="none"
+
+const ref=doc(db,"save",username)
+
+const snap=await getDoc(ref)
+
+if(snap.exists()){
+
+const data=snap.data()
+
+stars=data.stars
+multiplier=data.multiplier
+auto=data.auto
+clickCost=data.clickCost
+autoCost=data.autoCost
+
+}
+
+updateShop()
+
+}
+
+setInterval(async()=>{
+
+if(username=="")return
+
+await setDoc(doc(db,"save",username),{
+
+stars,
+multiplier,
+auto,
+clickCost,
+autoCost
+
+})
+
+},5000)
+
+</script>
+
+</body>
+</html>
