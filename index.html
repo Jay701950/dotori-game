@@ -1,110 +1,77 @@
 <!DOCTYPE html>
-
 <html lang="ko">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Star Clicker</title>
+<title>Ultimate Clicker</title>
 
 <style>
 
 body{
 margin:0;
-font-family:sans-serif;
-background:#060612;
+background:#111;
 color:white;
-display:flex;
-flex-direction:column;
-align-items:center;
-height:100vh;
+font-family:Arial;
+overflow:hidden;
 }
 
 #topbar{
-width:100%;
-max-width:900px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:15px;
-box-sizing:border-box;
-}
-
-#stars{
-font-size:28px;
-font-weight:bold;
-}
-
-#userid{
-font-size:13px;
-opacity:0.6;
+position:absolute;
+top:10px;
+left:10px;
+font-size:20px;
 }
 
 #shopBtn{
-background:#2b2b6e;
+position:absolute;
+top:50px;
+left:10px;
+padding:10px 20px;
+background:#444;
 border:none;
-padding:8px 15px;
 color:white;
-border-radius:6px;
 cursor:pointer;
-}
-
-#main{
-flex:1;
-display:flex;
-align-items:center;
-justify-content:center;
-}
-
-#circle{
-width:min(45vw,260px);
-height:min(45vw,260px);
-border-radius:50%;
-background:radial-gradient(circle,#4b4bff,#080830);
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:40px;
-cursor:pointer;
-transition:0.1s;
-}
-
-#circle:active{
-transform:scale(0.95);
 }
 
 #shop{
-position:fixed;
-left:-320px;
-top:0;
-width:320px;
-height:100%;
-background:#10102a;
-padding:20px;
-transition:0.3s;
-overflow:auto;
-}
-
-.upgrade{
-background:#1c1c44;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-cursor:pointer;
-}
-
-.upgrade:hover{
-background:#2a2a6b;
+position:absolute;
+top:100px;
+left:10px;
+width:250px;
+background:#222;
+padding:15px;
+display:none;
+border-radius:10px;
 }
 
 #closeShop{
 background:red;
 border:none;
-padding:6px 10px;
 color:white;
 cursor:pointer;
-margin-bottom:10px;
+}
+
+.upgrade{
+margin-top:10px;
+background:#333;
+padding:10px;
+cursor:pointer;
+}
+
+#clickCircle{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:200px;
+height:200px;
+border-radius:50%;
+background:linear-gradient(145deg,#4caf50,#2e7d32);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:24px;
+cursor:pointer;
+box-shadow:0 0 40px #4caf50;
 }
 
 #login{
@@ -112,61 +79,50 @@ position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-background:#111132;
-padding:40px;
+background:#222;
+padding:30px;
 border-radius:10px;
 }
 
-.float{
-position:absolute;
-pointer-events:none;
-color:yellow;
-animation:float 1s linear forwards;
-}
-
-@keyframes float{
-0%{opacity:1;transform:translateY(0)}
-100%{opacity:0;transform:translateY(-50px)}
-}
-
 </style>
-
 </head>
 
 <body>
 
 <div id="login">
-<h2>로그인</h2>
-<input id="nameInput" placeholder="아이디">
-<button onclick="login()">시작</button>
+<h2>Login</h2>
+<input id="username" placeholder="아이디">
+<button onclick="login()">Start</button>
 </div>
 
 <div id="topbar">
-
-<div>
-<div id="stars">⭐ 0</div>
-<div id="userid"></div>
+💰 <span id="points">0</span><br>
+👤 <span id="user"></span>
 </div>
 
 <button id="shopBtn">상점</button>
-
-</div>
-
-<div id="main">
-<div id="circle">⭐</div>
-</div>
 
 <div id="shop">
 
 <button id="closeShop">닫기</button>
 
-<h2>상점</h2>
+<h3>업그레이드</h3>
 
-<div class="upgrade" id="clickUpgrade"></div>
+<div class="upgrade" onclick="buyClick()">
+클릭 배율 업그레이드  
+<br>
+Cost: <span id="clickCost">10</span>
+</div>
 
-<div class="upgrade" id="autoUpgrade"></div>
+<div class="upgrade" onclick="buyAuto()">
+오토 포인트  
+<br>
+Cost: <span id="autoCost">25</span>
+</div>
 
 </div>
+
+<div id="clickCircle">CLICK</div>
 
 <script type="module">
 
@@ -179,178 +135,102 @@ authDomain: "dotori-game.firebaseapp.com",
 projectId: "dotori-game",
 storageBucket: "dotori-game.firebasestorage.app",
 messagingSenderId: "600286348366",
-appId: "1:600286348366:web:3ec0e53c54b07d5c4cef1f"
+appId: "1:600286348366:web:3ec0e53c54b07d5c4cef1f",
+measurementId: "G-7EX7B1T5C9"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let stars=0
-let clickLevel=0
-let autoLevel=0
+let user=""
+let points=0
+let clickPower=1
+let auto=0
 
-let username=""
-
-const starText=document.getElementById("stars")
-
-function format(n){
-
-if(n>=1e12) return (n/1e12).toFixed(1)+"T"
-if(n>=1e9) return (n/1e9).toFixed(1)+"B"
-if(n>=1e6) return (n/1e6).toFixed(1)+"M"
-if(n>=1e3) return (n/1e3).toFixed(1)+"K"
-
-return Math.floor(n)
-
-}
-
-function clickPower(){
-return Math.pow(2,clickLevel)
-}
-
-function autoPower(){
-return autoLevel
-}
-
-function clickPrice(){
-return Math.floor(20*Math.pow(1.35,clickLevel))
-}
-
-function autoPrice(){
-return Math.floor(50*Math.pow(1.55,autoLevel))
-}
+let clickCost=10
+let autoCost=25
 
 function updateUI(){
-
-starText.innerText="⭐ "+format(stars)
-
-document.getElementById("clickUpgrade").innerText=
-"클릭 배율 x"+clickPower()+"\n가격 ⭐ "+clickPrice()
-
-document.getElementById("autoUpgrade").innerText=
-"자동 생산 "+autoPower()+"/초\n가격 ⭐ "+autoPrice()
-
+document.getElementById("points").innerText=Math.floor(points)
+document.getElementById("clickCost").innerText=Math.floor(clickCost)
+document.getElementById("autoCost").innerText=Math.floor(autoCost)
 }
 
-document.getElementById("circle").onclick=(e)=>{
-
-stars+=clickPower()
-
-spawnNumber(e.clientX,e.clientY)
-
+document.getElementById("clickCircle").onclick=()=>{
+points+=clickPower
 updateUI()
-
-}
-
-function spawnNumber(x,y){
-
-const el=document.createElement("div")
-
-el.className="float"
-
-el.innerText="+"+clickPower()
-
-el.style.left=x+"px"
-
-el.style.top=y+"px"
-
-document.body.appendChild(el)
-
-setTimeout(()=>el.remove(),1000)
-
-}
-
-document.getElementById("clickUpgrade").onclick=()=>{
-
-const price=clickPrice()
-
-if(stars>=price){
-
-stars-=price
-clickLevel++
-
-updateUI()
-
-}
-
-}
-
-document.getElementById("autoUpgrade").onclick=()=>{
-
-const price=autoPrice()
-
-if(stars>=price){
-
-stars-=price
-autoLevel++
-
-updateUI()
-
-}
-
 }
 
 setInterval(()=>{
-
-stars+=autoPower()
-
+points+=auto
 updateUI()
-
 },1000)
 
+window.buyClick=()=>{
+if(points>=clickCost){
+points-=clickCost
+clickPower*=2
+clickCost*=2.2
+updateUI()
+}
+}
+
+window.buyAuto=()=>{
+if(points>=autoCost){
+points-=autoCost
+auto+=1
+autoCost*=2.5
+updateUI()
+}
+}
+
 document.getElementById("shopBtn").onclick=()=>{
-
-document.getElementById("shop").style.left="0"
-
+document.getElementById("shop").style.display="block"
 }
 
 document.getElementById("closeShop").onclick=()=>{
-
-document.getElementById("shop").style.left="-320px"
-
+document.getElementById("shop").style.display="none"
 }
 
-async function login(){
+window.login=async()=>{
 
-username=document.getElementById("nameInput").value
-
-document.getElementById("userid").innerText="ID: "+username
+user=document.getElementById("username").value
 
 document.getElementById("login").style.display="none"
+document.getElementById("user").innerText=user
 
-const ref=doc(db,"save",username)
-
+const ref=doc(db,"save",user)
 const snap=await getDoc(ref)
 
 if(snap.exists()){
+const data=snap.data()
 
-const d=snap.data()
-
-stars=d.stars
-clickLevel=d.clickLevel
-autoLevel=d.autoLevel
-
+points=data.points
+clickPower=data.clickPower
+auto=data.auto
+clickCost=data.clickCost
+autoCost=data.autoCost
 }
 
 updateUI()
 
+setInterval(save,3000)
+
 }
 
-setInterval(async()=>{
+async function save(){
 
-if(username=="") return
+if(user==="")return
 
-await setDoc(doc(db,"save",username),{
-
-stars,
-clickLevel,
-autoLevel
-
+await setDoc(doc(db,"save",user),{
+points,
+clickPower,
+auto,
+clickCost,
+autoCost
 })
 
-},5000)
-
-updateUI()
+}
 
 </script>
 
